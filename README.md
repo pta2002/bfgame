@@ -3,9 +3,9 @@ SPEC!
 `bfgame` is a brainfuck game engine (yes, seriously). This is its spec.
 
 # Memory (a.k.a. "tape")
-bfgame's memory space consists of a 'tape' with 2^16 cells, and a pointer, which you can move with the `<` and `>` operators.
+bfgame's memory space consists of a 'tape' with 2^32 cells, and a pointer, which you can move with the `<` and `>` operators.
 
-In bfgame, each cell can hold a 16-bit value.
+In bfgame, each cell can hold a 32-bit value.
 
 The first five cells are reserved for the FFI.
 
