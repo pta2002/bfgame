@@ -1,2 +1,0 @@
-#define TAPE_SIZE 4294967296
-#define CELL_SIZE 32
