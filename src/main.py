@@ -1,10 +1,14 @@
 import random
 import argparse
 import os.path
+import pygame
+from pygame.locals import *
+
+events = []
 
 class Module(object):
-	functions=[]
 	def __init__(self, name, modid):
+		self.functions = []
 		self.name = name
 		self.modid = modid
 	
@@ -12,12 +16,16 @@ class Module(object):
 		fn = Function(name, action)
 		self.functions.append(fn)
 		return len(self.functions)-1
-
+	
+	def __str__(self):
+		return self.name
 
 class Function(object):
 	def __init__(self, name, action):
 			self.name = name
 			self.action = action
+	def __str__(self):
+		return self.name
 
 
 class Interpreter(object):
@@ -74,13 +82,16 @@ class Interpreter(object):
 	
 	def run(self):
 		pointer = 0
-		tape = [0]
+		tape = []
 		instruction = 0
-
 		cjumps = dict((x,y) for y,x in self.braces.items())
+		
+		for _ in range(5):
+			tape.append(0)
 
 		while instruction < len(self.code):
 			c = self.code[instruction]
+			#print(pointer, tape[pointer], instruction, tape)
 			if c == '>':
 				pointer += 1
 				if pointer >= len(tape):
@@ -106,8 +117,10 @@ class Interpreter(object):
 				else:
 					raise Exception("No such module")
 			elif c == ',':
-				#TODO: EVENTS
-				tape[pointer] = 0
+				if len(events) != 0:
+					tape[pointer] = events.pop()
+				else:
+					tape[pointer] = 0
 			if c not in '[]':
 				instruction += 1
 			else:
@@ -126,11 +139,51 @@ class Interpreter(object):
 # MODULES!
 class ModuleIO(Module):
 	def __init__(self, modid):
+		super().__init__("IO", modid)
 		self.add_function("print", self.fn_print)
 	
 	def fn_print(self, pointer, tape, args):
 		print("".join([chr(x) for x in args]))
 		return 0
+
+class ModuleRandom(Module):
+	def __init__(self, modid):
+		super().__init__("Random", modid)
+		self.add_function("randbool", self.fn_bool)
+		self.add_function("randrange", self.fn_range)
+		self.add_function("randchoice", self.fn_choice)
+	
+	def fn_bool(self, pointer, tape, args):
+		return random.getrandbits(1)
+	
+	def fn_range(self, pointer, tape, args):
+		return random.range(args[0], args[1])
+	
+	def fn_choice(self, pointer, tape, args):
+		return random.choice(args)
+
+	def fn_setseed(self, pointer, tape, args):
+		random.seed(args[0])
+
+class ModuleGame(Module): # Oh god no ;_;
+	def __init__(self, modid):
+		super().__init__("Game", modid)
+		self.vars = []
+		if not pygame.font: print('Warning: fonts disabled')
+		if not pygame.mixer: print('Warning: sound disabled')
+		self.add_function("init", self.fn_init)
+		self.add_function("newdisplay", self.fn_newdisplay)
+		
+	def fn_init(self, pointer, tape, args):
+		pygame.init()
+		print("pygame initialized!")
+	
+	def fn_newdisplay(self, pointer, tape, args):
+		self.vars.append(pygame.display.set_mode(args[0:2]))
+		ptr = len(self.vars)-1
+		print("display created!")
+		return ptr
+	
 
 argparser = argparse.ArgumentParser(description="A brainfuck game framework. Yes, seriously.")
 argparser.add_argument("file", help="The file to run")
@@ -140,6 +193,9 @@ if os.path.isfile(args.file):
 	with open(args.file) as f:
 		interpreter = Interpreter(f.read())
 		interpreter.add_module(ModuleIO)
+		interpreter.add_module(ModuleRandom)
+		interpreter.add_module(ModuleGame)
 		interpreter.run()
 else:
 	print("bfgame: %s: no such file" % args.file)
+
