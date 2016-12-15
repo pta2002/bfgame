@@ -100,9 +100,15 @@ class Interpreter(object):
 				if pointer > 0:
 					pointer -= 1
 			elif c == '+':
-				tape[pointer]+=1
+				if tape[pointer]+1<=2**64:
+					tape[pointer]+=1
+				else:
+					tape[pointer]=0
 			elif c == '-':
-				tape[pointer]-=1 #TODO: Should it allow values < 0?
+				if tape[pointer]-1 >= 0:
+					tape[pointer]-=1
+				else:
+					tape[pointer]=2**64
 			elif c == '.':
 				if tape[0] <= len(self.modules) and tape[0] > 0:
 					m = self.modules[tape[0]-1]
@@ -115,12 +121,15 @@ class Interpreter(object):
 						else:
 							tape[4] = 0
 				else:
+					print(tape[:5])
 					raise Exception("No such module")
 			elif c == ',':
 				if len(events) != 0:
 					tape[pointer] = events.pop()
 				else:
 					tape[pointer] = 0
+			elif c == '~':
+				print(pointer, tape[pointer], tape)
 			if c not in '[]':
 				instruction += 1
 			else:
@@ -173,16 +182,31 @@ class ModuleGame(Module): # Oh god no ;_;
 		if not pygame.mixer: print('Warning: sound disabled')
 		self.add_function("init", self.fn_init)
 		self.add_function("newdisplay", self.fn_newdisplay)
+		self.add_function("setcaption", self.fn_setcaption)
+		self.add_function("update", self.fn_update)
+
 		
 	def fn_init(self, pointer, tape, args):
 		pygame.init()
 		print("pygame initialized!")
+		return 0
 	
 	def fn_newdisplay(self, pointer, tape, args):
 		self.vars.append(pygame.display.set_mode(args[0:2]))
 		ptr = len(self.vars)-1
 		print("display created!")
 		return ptr
+	
+	def fn_setcaption(self, pointer, tape, args):
+		title = "".join([chr(x) for x in tape[args[0]:args[1]+1]])
+		pygame.display.set_caption(title)
+		return 0
+	
+	def fn_update(self, pointer, tape, args):
+		for event in pygame.event.get():
+			print("EVENT: %d" % event.type)
+			events.append(event.type)
+		pygame.display.flip()
 	
 
 argparser = argparse.ArgumentParser(description="A brainfuck game framework. Yes, seriously.")
